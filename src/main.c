@@ -6,7 +6,7 @@
 /*   By: rtsubuku <rtsubuku@student.42tokyo.jp>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/22 14:14:38 by rtsubuku          #+#    #+#             */
-/*   Updated: 2026/02/24 15:18:42 by rtsubuku         ###   ########.fr       */
+/*   Updated: 2026/02/25 10:10:24 by rtsubuku         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,8 @@
 
 typedef struct s_sim
 {
-	long	start_ms;
+	long			start_ms;
+	pthread_mutex_t	log_mutex;
 }	t_sim;
 
 typedef struct s_coder
@@ -99,15 +100,26 @@ void	*coder_routine(void *arg)
 int	main(int ac, char **av)
 {
 	t_sim		sim;
-	t_coder		coder;
-	pthread_t	th;
+	t_coder		coders[2];
+	pthread_t	th[2];
+	int			i;
 
 	(void)ac;
 	(void)av;
-	coder.coder_id = 1;
-	coder.sim = &sim;
+	i = 0;
 	sim.start_ms = now_ms();
-	pthread_create(&th, NULL, coder_routine, &coder);
-	pthread_join(th, NULL);
+	while (i < 2)
+	{
+		coders[i].coder_id = i + 1;
+		coders[i].sim = &sim;
+		pthread_create(&th[i], NULL, coder_routine, &coders[i]);
+		i++;
+	}
+	i = 0;
+	while (i < 2)
+	{
+		pthread_join(th[0], NULL);
+		i++;
+	}
 	return (0);
 }
