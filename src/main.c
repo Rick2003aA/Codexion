@@ -6,7 +6,7 @@
 /*   By: rtsubuku <rtsubuku@student.42tokyo.jp>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/22 14:14:38 by rtsubuku          #+#    #+#             */
-/*   Updated: 2026/02/25 10:10:24 by rtsubuku         ###   ########.fr       */
+/*   Updated: 2026/02/26 11:15:29 by rtsubuku         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ typedef struct s_sim
 {
 	long			start_ms;
 	pthread_mutex_t	log_mutex;
+	pthread_mutex_t	dongle;
 }	t_sim;
 
 typedef struct s_coder
@@ -55,8 +56,10 @@ void	log_state(t_sim *sim, int coder_id, const char *msg)
 {
 	long	elapsed;
 
+	pthread_mutex_lock(&sim->log_mutex);
 	elapsed = elapsed_ms(sim);
 	printf("%ld %d %s\n", elapsed, coder_id, msg);
+	pthread_mutex_unlock(&sim->log_mutex);
 }
 
 void	sleep_ms(long ms)
@@ -74,7 +77,14 @@ void	*coder_routine(void *arg)
 	while (i < 9)
 	{
 		if (i % 3 == 0)
+		{
+			pthread_mutex_lock(&coder->sim->dongle);
+			log_state(coder->sim, coder->coder_id, "got dongle");
 			log_state(coder->sim, coder->coder_id, "is compiling");
+			sleep_ms(200);
+			log_state(coder->sim, coder->coder_id, "released dongle");
+			pthread_mutex_unlock(&coder->sim->dongle);
+		}
 		else if (i % 3 == 1)
 			log_state(coder->sim, coder->coder_id, "is debugging");
 		else
@@ -87,27 +97,28 @@ void	*coder_routine(void *arg)
 	return (NULL);
 }
 
-// int	sim_init(t_sim *sim)
-// {
-// 	// 開始時刻・mutex初期化など「会場準備」
-// }
+void	sim_init(t_sim *sim)
+{
+	sim->start_ms = now_ms();
+	pthread_mutex_init(&sim->log_mutex, NULL);
+	pthread_mutex_init(&sim->dongle, NULL);
+}
 
-// void	sim_destroy(t_sim *sim)
-// {
-// 	// 後片付け
-// }
+void	sim_destroy(t_sim *sim)
+{
+	pthread_mutex_destroy(&sim->log_mutex);
+	pthread_mutex_destroy(&sim->dongle);
+}
 
-int	main(int ac, char **av)
+int	main(void)
 {
 	t_sim		sim;
 	t_coder		coders[2];
 	pthread_t	th[2];
 	int			i;
 
-	(void)ac;
-	(void)av;
+	sim_init(&sim);
 	i = 0;
-	sim.start_ms = now_ms();
 	while (i < 2)
 	{
 		coders[i].coder_id = i + 1;
@@ -118,8 +129,9 @@ int	main(int ac, char **av)
 	i = 0;
 	while (i < 2)
 	{
-		pthread_join(th[0], NULL);
+		pthread_join(th[i], NULL);
 		i++;
 	}
+	sim_destroy(&sim);
 	return (0);
 }

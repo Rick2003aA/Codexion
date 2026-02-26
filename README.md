@@ -26,6 +26,8 @@ AIを使うときに意識したこと・使用方法：
 1 gettimeofdayの練習
 まずはgettimeofday()を使用して経過時間を記録するプログラムを作成。
 C言語の書き方を完全に忘れており、色々苦戦したものの、whileで回して時間経過を三回記録することに成功。
+
+出力：
 elapsed = 0 ms
 elapsed = 100 ms
 elapsed = 201 ms
@@ -39,12 +41,60 @@ mainでpthread_create()を使用してスレッドを作成し、pthread_join()�
 1 スレッドで複数人のcoderを動かしてみる
 pthreadを使用してcoder一人でcoder_routine()を回すことができた。
 次はcoderを二人以上用意して同時並行してcoder_routine()行う。
+
+コード：
 	t_coder		coders[2];
 	pthread_t	th[2];
+
 上記のように、構造体を複数持たせることで、並行作業を可能にする。
 
 2 mutexを使用してcodersの出力が崩れないようにする
 printfは一行まるごと一瞬で出るとは限らず、内部で少しずつ出力することがある。
 例えば、出力（printf）が重なってしまった場合、以下のような出力が起きる可能性があり、それを防ぐのがmutexである。
-	100 1 is comp101 2 is compiling
-	iling
+
+出力（Bad）：
+100 1 is comp101 2 is compiling
+iling
+
+mutexを用いた実装の流れ
+coder1: lock(鍵取る) → printf → unlock(鍵返す)
+coder2: lock(鍵取る) → printf → unlock(鍵返す)
+→ 絶対に混ざらない
+
+
+### 2026/02/26
+1 mutexの実装の続き
+t_simにlog_mutexという状態をもたせ、その状態をlock, unlockで変化させることで処理が一つずつ行われるようになる。
+- ### 初期化
+pthread_mutex_init(&sim->log_mutex, NULL);
+
+- ### 作業の前にロックすることでprintfの重複を避ける
+pthread_mutex_lock(&sim->log_mutex);
+elapsed = elapsed_ms(sim);
+printf("%ld %d %s\n", elapsed, coder_id, msg);
+pthread_mutex_unlock(&sim->log_mutex);
+
+-  ### 後片付け（内部リソースの開放）
+pthread_mutex_destroy(&sim->log_mutex)
+
+ここまでの成果：複数人（pthread_create使用）でログをエラーなく処理（pthread_mutex使用）できるようになった
+
+2 dongle(共有資源)を入れる
+codersはdongleがないとcompileできずにburn outしてしまうのでdongleを奪い合う。
+まずは超シンプルにする（dongle 1本）。これを二人で奪い合う構図にすれば、共有資源の挙動の最小実装ができる。
+t_simにdongleの状態（lock, unlock）を持たせて、dongleが同時に利用される状態が起こらないようにする。
+- ### 初期化
+pthread_mutex_init(&sim->dongle, NULL);
+
+- ### compile時にdongleをlockする → 使用後にunlock
+pthread_mutex_lock(&coder->sim->dongle);
+log_state(coder->sim, coder->coder_id, "got dongle");
+log_state(coder->sim, coder->coder_id, "is compiling");
+sleep_ms(200);
+log_state(coder->sim, coder->coder_id, "released dongle");
+pthread_mutex_unlock(&coder->sim->dongle);
+
+- ### 後片付け 
+pthread_mutex_destroy(&sim->dongle);
+
+
