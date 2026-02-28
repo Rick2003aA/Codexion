@@ -97,4 +97,44 @@ pthread_mutex_unlock(&coder->sim->dongle);
 - ### 後片付け 
 pthread_mutex_destroy(&sim->dongle);
 
+### 2026/02/27
+1 dongleの本数を増やして複数人での取り合いを再現する
+t_sim のdongleを*donglesにして、dongle_countをmallocする
+→　*donglesはメモリ領域となり、dongle_count分メモリ上に連続して並ぶようになる。
+
+コード：
+	idx = coder->coder_id % coder->sim->dongle_count;
+
+	pthread_mutex_lock(&coder->sim->dongles[idx]);
+	log_state(coder->sim, coder->coder_id, "got dongle");
+	log_state(coder->sim, coder->coder_id, "is compiling");
+	sleep_ms(200);
+	log_state(coder->sim, coder->coder_id, "released dongle");
+	pthread_mutex_unlock(&coder->sim->dongles[idx]);
+idxは何？：coderがdonbleにアクセスするための番号（メモリ上の位置）。coderは両隣のdongleしか使用できないため、使用できるdongleを制限する必要がある。
+
+### 2026/02/28
+1 dongleの必要本数を二本にする
+coder_routineにおいてleft, right という変数を作成し、デッドロックが起きないようにそれぞれが適切にdongleを取り合うようにする
+デッドロックとは？：coderたちがそれぞれ片手にdongleを持って離さない状態
+
+デッドロックの回避方法
+→ 小さい番号(idx)からlockする。
+
+実装
+	left = idx;
+	right = (idx + 1) % coder->sim->dongle_count;
+	first = ft_min(right, left);
+	second = ft_max(right, left);
+	→ first, secondの順でlockしてからcompileを実行するようにする
+
+2 プログラムの終了条件を設定し、きれいにコードを閉じる
+現状は指定された回数coder_routineをこなせばコードは終了するが、burn_outしたときは途中でコードを終わらせることになる。その際にきれいに処理を終了させたい。
+t_simにstopとstop_mutexを追加して、boolでシグナル化する。mainでstopの切り替え（sim_request_stop()）を行い、mainが司令塔になるような構成にする。
+
+3 monitorスレッドの実装
+現状はmainでコードの終了条件を指定して管理しているが、監視役(monitor)を実装することでより整理されたコードとなる
+流れ：monitorがシグナルを定期的にチェックしてsim_request_stop()を呼ぶ
+
+4 monitorで止める条件をcoderのcompile状況を見て決める
 
