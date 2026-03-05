@@ -175,3 +175,5 @@ monitor_routine(): 全coderを定期チェックしてtimed outならstop
 
 2 dongle cooldown の実装
 dongleの開放直後にすぐに使えないようにする。
+dongleのための新しい構造体を作成し、lock, unlock, cooldownを一つにまとめる
+coderがdongleをロックしようとしたときに、dongle_lockに入ってwhileで使用可能かどうかを判定するもし使用不可であればpthread_cond_timedwaitを使用して一時的に決めた時間分スレッドを停止させる。
