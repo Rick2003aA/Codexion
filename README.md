@@ -136,5 +136,42 @@ t_simにstopとstop_mutexを追加して、boolでシグナル化する。main�
 現状はmainでコードの終了条件を指定して管理しているが、監視役(monitor)を実装することでより整理されたコードとなる
 流れ：monitorがシグナルを定期的にチェックしてsim_request_stop()を呼ぶ
 
-4 monitorで止める条件をcoderのcompile状況を見て決める
+### 2026/03/02
+1 monitorで止める条件をcoderのcompile状況を見て決める
+coder側：生存報告を定期的に共有変数（構造体に含む）に記録する
+monitor側：その共有変数を見て「止まっている人がいたらstop = 1にする」
+追加する変数
 
+- t_coder
+last_action_ms: 最後に活動した時刻
+action_mutex: last_action_ms をcoder と monitor が同時に触るので保護する
+
+- t_sim
+coders / coder_count: monitorが全coderを操作するための配列
+timeout_ms: 何ms更新がなければアウトかを定義
+stop / stop_mutex: アウトのときのシグナルとそれを安全に書き込むためのmutex
+
+追加する関数
+coder_touch(): last_action_msを現在時刻で更新
+coder_timed_out(): now - last_action_ms > timeout なら１
+monitor_routine(): 全coderを定期チェックしてtimed outならstop
+
+### 2026/03/03
+1 今まで全部main.cにまとめて書いていたのでファイル分割
+それに伴い、変数や構造体をもっときれいにできることに気づき、修正が重なる
+→ コレ以外特に進捗なし
+
+### 2026/03/04
+1 昨日の続き
+コマンドライン引数の実装。mainの一部をsim_init.cに移行。新機能の実装はまだしていない
+
+2 現状、コードの中でtime_to_compileなどをマジックナンバーみたいな感じで実装してしまっているので、それを構造体にまとめて綺麗にする
+
+### 2026/03/05
+1 burnout する条件の設定と必要最低限のコンパイル数をmonitorが参照して、プログラムの終了条件をこちらで自由に設定できるようになった。
+- burnoutは 「最後にcompileを開始した時刻」から time_to_burnout を超えたら そのcoderがburnoutして終了
+
+- required compile回数による終了は 「全員」が required 回数に達したら終了（誰か1人ではない）
+
+2 dongle cooldown の実装
+dongleの開放直後にすぐに使えないようにする。
