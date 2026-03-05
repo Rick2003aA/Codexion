@@ -38,7 +38,6 @@ int	sim_init(t_sim *sim)
 {
 	int			i;
 	t_coder		*coders;
-	t_rules		rules;
 	pthread_t	*th;
 
 	coders = malloc(sizeof(t_coder) * sim->coder_count);
@@ -62,10 +61,10 @@ int	sim_init(t_sim *sim)
 	i = 0;
 	while (i < sim->dongle_count)
 	{
-		if (pthread_mutex_init(&sim->dongles[i], NULL) != 0)
+		if (pthread_mutex_init(&sim->dongles[i].m, NULL) != 0)
 		{
 			while (i > 0)
-				pthread_mutex_destroy(&sim->dongles[--i]);
+				pthread_mutex_destroy(&sim->dongles[--i].m);
 			free(sim->dongles);
 			sim->dongles = NULL;
 			pthread_mutex_destroy(&sim->log_mutex);
@@ -75,6 +74,17 @@ int	sim_init(t_sim *sim)
 		if (pthread_cond_init(&sim->dongles[i].cv, NULL) != 0)
 		{
 			pthread_mutex_destroy(&sim->dongles[i].m);
+			while (i > 0)
+			{
+				pthread_cond_destroy(&sim->dongles[i - 1].cv);
+				pthread_mutex_destroy(&sim->dongles[i - 1].m);
+				i--;
+			}
+			free(sim->dongles);
+			sim->dongles = NULL;
+			pthread_mutex_destroy(&sim->log_mutex);
+			pthread_mutex_destroy(&sim->stop_mutex);
+			return (1);
 		}
 		sim->dongles[i].available_at_ms = 0;
 		i++;

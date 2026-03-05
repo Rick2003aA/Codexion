@@ -107,32 +107,33 @@ void	*coder_routine(void *arg)
 
 	i = 0;
 	coder = (t_coder *)arg;
+	sim = coder->sim;
 	pthread_mutex_lock(&coder->action_mutex);
 	coder->compile_count = 0;
 	pthread_mutex_unlock(&coder->action_mutex);
 	idx = coder->coder_id - 1;
 	left = idx;
-	right = (idx + 1) % coder->sim->dongle_count;
+	right = (idx + 1) % sim->dongle_count;
 	first = ft_min(right, left);
 	second = ft_max(right, left);
-	while (!sim_should_stop(coder->sim))
+	while (!sim_should_stop(sim))
 	{
 		if (i % 3 == 0)
 		{
-			if (sim_should_stop(coder->sim))
+			if (sim_should_stop(sim))
 				break ;
-			if (!dongle_lock(coder->sim, first))
+			if (!dongle_lock(sim, first))
 				break ;
-			log_state(coder->sim, coder->coder_id, "has taken a dongle");
-			if (!dongle_lock(coder->sim, second))
+			log_state(sim, coder->coder_id, "has taken a dongle");
+			if (!dongle_lock(sim, second))
 			{
-				dongle_unlock_with_cooldown(coder->sim, first);
+				dongle_unlock_with_cooldown(sim, first);
 				break ;
 			}
-			log_state(coder->sim, coder->coder_id, "has taken a dongle");
+			log_state(sim, coder->coder_id, "has taken a dongle");
 			coder_touch(coder);
-			log_state(coder->sim, coder->coder_id, "is compiling");
-			sleep_ms(coder->sim->rules.time_to_compile);
+			log_state(sim, coder->coder_id, "is compiling");
+			sleep_ms(sim->rules.time_to_compile);
 			dongle_unlock_with_cooldown(sim, second);
 			dongle_unlock_with_cooldown(sim, first);
 			pthread_mutex_lock(&coder->action_mutex);
@@ -141,13 +142,13 @@ void	*coder_routine(void *arg)
 		}
 		else if (i % 3 == 1)
 		{
-			log_state(coder->sim, coder->coder_id, "is debugging");
-			sleep_ms(coder->sim->rules.time_to_debug);
+			log_state(sim, coder->coder_id, "is debugging");
+			sleep_ms(sim->rules.time_to_debug);
 		}
 		else
 		{
-			log_state(coder->sim, coder->coder_id, "is refactoring");
-			sleep_ms(coder->sim->rules.time_to_refactor);
+			log_state(sim, coder->coder_id, "is refactoring");
+			sleep_ms(sim->rules.time_to_refactor);
 		}
 		i++;
 	}

@@ -67,8 +67,8 @@ int	parse_args(t_rules *rules, int ac, char **av)
 	rules->number_of_compiles_required = atoi(av[6]);
 	if (rules->number_of_compiles_required < 1)
 		return (1);
-	rules->dongle_cooldown = atoi(av[7]);
-	if (rules->dongle_cooldown < 0)
+	rules->dongle_cooldown_ms = atoi(av[7]);
+	if (rules->dongle_cooldown_ms < 0)
 		return (1);
 	if (strcmp(av[8], "fifo") == 0)
 		rules->scheduler = CODEXION_FIFO;

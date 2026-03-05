@@ -71,7 +71,6 @@ typedef struct s_coder
 
 	long			last_compile_start_ms;
 	int				compile_count;
-	t_coder_state	state;
 
 	pthread_mutex_t	action_mutex;
 }	t_coder;
