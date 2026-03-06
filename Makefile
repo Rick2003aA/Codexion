@@ -5,8 +5,13 @@ CFLAGS := -Wall -Wextra -Werror -pthread
 CFLAGS += -I src
 
 SRC := src/app/main.c \
-	src/core/coder.c \
+	src/core/sim_stop.c \
+	src/core/dongle.c \
+	src/core/scheduler.c \
+	src/core/coder_actions.c \
+	src/core/coder_routine.c \
 	src/core/monitor.c \
+	src/core/monitor_checks.c \
 	src/init/parse.c \
 	src/init/sim_init.c \
 	src/common/time.c \

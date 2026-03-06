@@ -83,15 +83,34 @@ typedef struct s_coder
 	long next_deadline_ms;
 }	t_coder;
 
-//main.c
-void	sim_destroy(t_sim *sim);
+// core/monitor_checks.c
 int		coder_timed_out(t_coder *c, long now, long timeout);
+int		monitor_find_burned_out(t_sim *sim, long now);
+int		all_compiled_enough(t_sim *sim);
+
+// core/monitor.c
 void	*monitor_routine(void *arg);
 
-// coder.c
-void	*coder_routine(void *arg);
+// core/sim_stop.c
 int		sim_should_stop(t_sim *sim);
 void	sim_request_stop(t_sim *sim);
+
+// core/dongle.c
+int		dongle_lock(t_sim *sim, int idx);
+void	dongle_unlock_with_cooldown(t_sim *sim, int idx);
+
+// core/scheduler.c
+int		scheduler_wait_turn(t_coder *coder);
+void	scheduler_release_turn(t_coder *coder);
+
+// core/coder_actions.c
+int		coder_do_compile(t_coder *coder, int first, int second);
+void	coder_do_debug(t_coder *coder);
+void	coder_do_refactor(t_coder *coder);
+
+// app/main.c
+void	sim_destroy(t_sim *sim);
+void	*coder_routine(void *arg);
 
 // utils.c
 void	sleep_ms(long ms);
