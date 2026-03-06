@@ -3,77 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rtsubuku <rtsubuku@student.42tokyo.jp>     +#+  +:+       +#+        */
+/*   By: shinnunohisashiryuuichi <shinnunohisash    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/22 14:14:38 by rtsubuku          #+#    #+#             */
-/*   Updated: 2026/03/05 11:11:18 by rtsubuku         ###   ########.fr       */
+/*   Updated: 2026/03/06 11:12:26 by shinnunohis      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
-
-int	coder_timed_out(t_coder *c, long now, long timeout)
-{
-	long	last;
-
-	pthread_mutex_lock(&c->action_mutex);
-	last = c->last_compile_start_ms;
-	pthread_mutex_unlock(&c->action_mutex);
-	return (now - last > timeout);
-}
-
-static int	all_compiled_enough(t_sim *sim)
-{
-	int	i;
-	int	ok;
-
-	if (sim->rules.number_of_compiles_required <= 0)
-		return (0);
-	i = 0;
-	while (i < sim->coder_count)
-	{
-		pthread_mutex_lock(&sim->coders[i].action_mutex);
-		ok = (sim->coders[i].compile_count >= sim->rules.number_of_compiles_required);
-		pthread_mutex_unlock(&sim->coders[i].action_mutex);
-		if (!ok)
-			return (0);
-		i++;
-	}
-	return (1);
-}
-
-void	*monitor_routine(void *arg)
-{
-	t_sim	*sim;
-	long	now;
-	int		i;
-
-	sim = (t_sim *)arg;
-	while (!sim_should_stop(sim))
-	{
-		now = timestamp_ms(sim);
-		i = 0;
-		while (i < sim->coder_count)
-		{
-			if (coder_timed_out(&sim->coders[i], now, sim->rules.time_to_burnout))
-			{
-				log_state(sim, sim->coders[i].coder_id, "burned out");
-				sim_request_stop(sim);
-				return (NULL);
-			}
-			i++;
-		}
-		if (all_compiled_enough(sim))
-		{
-			sim_request_stop(sim);
-			printf("Mission completed");
-			return (NULL);
-		}
-		sleep_ms(1);
-	}
-	return (NULL);
-}
-
 
 int	main(int ac, char **av)
 {
@@ -100,6 +37,9 @@ int	main(int ac, char **av)
 		coders[i].sim = &sim;
 		pthread_mutex_init(&coders[i].action_mutex, NULL);
 		coders[i].last_compile_start_ms = 0;
+		coders[i].waiting_compile = 0;
+		coders[i].fifo_ticket = -1;
+		coders[i].next_deadline_ms = rules.time_to_burnout;
 		i++;
 	}
 	pthread_create(&monitor_th, NULL, monitor_routine, &sim);

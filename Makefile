@@ -2,15 +2,17 @@ NAME := codexion
 
 CC := cc
 CFLAGS := -Wall -Wextra -Werror -pthread
+CFLAGS += -I src
 
-SRC := src/main.c \
-	src/coder.c \
-	src/parse.c \
-	src/sim_init.c \
-	src/time.c \
-	src/log.c \
-	src/utils.c \
-	src/cleanup.c
+SRC := src/app/main.c \
+	src/core/coder.c \
+	src/core/monitor.c \
+	src/init/parse.c \
+	src/init/sim_init.c \
+	src/common/time.c \
+	src/common/log.c \
+	src/common/utils.c \
+	src/common/cleanup.c
 
 OBJ := $(SRC:.c=.o)
 

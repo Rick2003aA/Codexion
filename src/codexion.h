@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   codexion.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rtsubuku <rtsubuku@student.42tokyo.jp>     +#+  +:+       +#+        */
+/*   By: shinnunohisashiryuuichi <shinnunohisash    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/24 14:23:12 by rtsubuku          #+#    #+#             */
-/*   Updated: 2026/03/05 12:18:33 by rtsubuku         ###   ########.fr       */
+/*   Updated: 2026/03/05 17:35:45 by shinnunohis      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,6 +62,10 @@ typedef struct s_sim
 	int				stop;
 	pthread_mutex_t	stop_mutex;
 
+	pthread_mutex_t sched_mutex;
+	pthread_cond_t 	sched_cv;
+	long 			fifo_next_ticket;
+	long 			fifo_serving_ticket;
 }	t_sim;
 
 typedef struct s_coder
@@ -73,6 +77,10 @@ typedef struct s_coder
 	int				compile_count;
 
 	pthread_mutex_t	action_mutex;
+
+	long fifo_ticket;
+	int waiting_compile;
+	long next_deadline_ms;
 }	t_coder;
 
 //main.c
